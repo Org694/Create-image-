@@ -5,81 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Image Studio</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { max-width: 800px; width: 100%; background: #2d2d2d; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-        input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 6px; border: none; }
-        button { padding: 12px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-generate { background: #00ff88; color: #1a1a1a; }
-        .btn-edit { background: #00a2ff; color: white; }
-        .canvas-area { border: 2px dashed #444; min-height: 400px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
-        canvas { max-width: 100%; height: auto; border-radius: 8px; }
-        .edit-tools { margin-top: 15px; display: none; gap: 10px; justify-content: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 700px; }
+        .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        h1 { color: #4834d4; text-align: center; }
+        h2 { margin-top: 0; color: #30336b; font-size: 1.2rem; }
+        textarea, select, input[type="file"] { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #edeff2; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
+        button { width: 100%; padding: 15px; background-color: #686de0; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #4834d4; }
+        button:disabled { background-color: #ccc; }
+        .loader { display: none; text-align: center; margin-top: 10px; color: #686de0; font-weight: bold; }
+        img { width: 100%; border-radius: 12px; margin-top: 20px; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>AI Image Creator & Editor</h2>
-        
-        <div class="controls">
-            <input type="text" id="prompt" placeholder="Describe the image you want to create...">
-            <button class="btn-generate" onclick="generateImage()">Generate</button>
-        </div>
+<div class="container">
+    <h1>AI Image Studio</h1>
 
-        <div class="canvas-area" id="canvas-container">
-            <p id="placeholder-text">Your masterpiece will appear here</p>
-            <canvas id="mainCanvas"></canvas>
-        </div>
-
-        <div class="edit-tools" id="editTools">
-            <button class="btn-edit" onclick="applyFilter('grayscale(100%)')">B&W</button>
-            <button class="btn-edit" onclick="applyFilter('sepia(100%)')">Sepia</button>
-            <button class="btn-edit" onclick="applyFilter('brightness(150%)')">Brighten</button>
-            <button style="background:#ff4444; color:white;" onclick="resetImage()">Reset</button>
-        </div>
+    <div class="card">
+        <h2>1. Generate New Image</h2>
+        <textarea id="genPrompt" rows="3" placeholder="Describe your image..."></textarea>
+        <select id="orientation">
+            <option value="square">Square</option>
+            <option value="landscape">Landscape</option>
+            <option value="vertical">Vertical</option>
+        </select>
+        <button id="genBtn" onclick="handleGenerate()">Create Masterpiece</button>
+        <div id="genLoader" class="loader">AI is painting...</div>
+        <div id="genResult"></div>
     </div>
 
-    <script>
-        const canvas = document.getElementById('mainCanvas');
-        const ctx = canvas.getContext('2d');
-        let originalImage = null;
+    <div class="card">
+        <h2>2. Edit Existing Image</h2>
+        <input type="file" id="imageInput" accept="image/*">
+        <textarea id="editPrompt" rows="2" placeholder="What should I change?"></textarea>
+        <button id="editBtn" onclick="handleEdit()">Apply Edit</button>
+        <div id="editLoader" class="loader">AI is re-painting...</div>
+        <div id="editResult"></div>
+    </div>
+</div>
 
-        async function generateImage() {
-            const prompt = document.getElementById('prompt').value;
-            if (!prompt) return alert("Please enter a prompt!");
+<script>
+    const API_BASE = '/api';
 
-            document.getElementById('placeholder-text').innerText = "Generating... (Simulated)";
+    async function handleGenerate() {
+        const prompt = document.querySelector('#genPrompt').value;
+        const orientation = document.querySelector('#orientation').value;
+        if (!prompt) return alert("Enter a prompt!");
+
+        toggleState('gen', true);
+        try {
+            const response = await fetch(`${API_BASE}/create-image`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, orientation })
+            });
+            const data = await response.json();
+            document.querySelector('#genResult').innerHTML = `<img src="${data.image_url}">`;
+        } catch (err) { alert("Error generating image."); }
+        toggleState('gen', false);
+    }
+
+    async function handleEdit() {
+        const file = document.querySelector('#imageInput').files[0];
+        const prompt = document.querySelector('#editPrompt').value;
+        if (!file || !prompt) return alert("Select image and enter prompt!");
+
+        toggleState('edit', true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
             
-            // Note: In a real app, you would fetch from an API (OpenAI, Stability, etc.)
-            // Here, we use a high-quality placeholder to demonstrate the workflow
-            const imageUrl = `https://picsum.photos/seed/${Math.random()}/800/600`;
-            
-            const img = new Image();
-            img.crossOrigin = "Anonymous"; 
-            img.src = imageUrl;
-            img.onload = () => {
-                document.getElementById('placeholder-text').style.display = 'none';
-                document.getElementById('editTools').style.display = 'flex';
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-                originalImage = img;
-            };
-        }
+            const uploadRes = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+            const { image_id } = await uploadRes.json();
 
-        function applyFilter(filterString) {
-            if (!originalImage) return;
-            ctx.filter = filterString;
-            ctx.drawImage(originalImage, 0, 0);
-        }
+            const editRes = await fetch(`${API_BASE}/edit-image`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_id, prompt })
+            });
+            const data = await editRes.json();
+            document.querySelector('#editResult').innerHTML = `<img src="${data.image_url}">`;
+        } catch (err) { alert("Error editing image."); }
+        toggleState('edit', false);
+    }
 
-        function resetImage() {
-            if (!originalImage) return;
-            ctx.filter = 'none';
-            ctx.drawImage(originalImage, 0, 0);
-        }
-    </script>
+    function toggleState(type, loading) {
+        document.querySelector(`#${type}Btn`).disabled = loading;
+        document.querySelector(`#${type}Loader`).style.display = loading ? 'block' : 'none';
+    }
+</script>
+
 </body>
-  </html>
-  
+</html>

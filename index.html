@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Studio</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { max-width: 800px; width: 100%; background: #2d2d2d; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 6px; border: none; }
+        button { padding: 12px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-generate { background: #00ff88; color: #1a1a1a; }
+        .btn-edit { background: #00a2ff; color: white; }
+        .canvas-area { border: 2px dashed #444; min-height: 400px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
+        canvas { max-width: 100%; height: auto; border-radius: 8px; }
+        .edit-tools { margin-top: 15px; display: none; gap: 10px; justify-content: center; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>AI Image Creator & Editor</h2>
+        
+        <div class="controls">
+            <input type="text" id="prompt" placeholder="Describe the image you want to create...">
+            <button class="btn-generate" onclick="generateImage()">Generate</button>
+        </div>
+
+        <div class="canvas-area" id="canvas-container">
+            <p id="placeholder-text">Your masterpiece will appear here</p>
+            <canvas id="mainCanvas"></canvas>
+        </div>
+
+        <div class="edit-tools" id="editTools">
+            <button class="btn-edit" onclick="applyFilter('grayscale(100%)')">B&W</button>
+            <button class="btn-edit" onclick="applyFilter('sepia(100%)')">Sepia</button>
+            <button class="btn-edit" onclick="applyFilter('brightness(150%)')">Brighten</button>
+            <button style="background:#ff4444; color:white;" onclick="resetImage()">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        let originalImage = null;
+
+        async function generateImage() {
+            const prompt = document.getElementById('prompt').value;
+            if (!prompt) return alert("Please enter a prompt!");
+
+            document.getElementById('placeholder-text').innerText = "Generating... (Simulated)";
+            
+            // Note: In a real app, you would fetch from an API (OpenAI, Stability, etc.)
+            // Here, we use a high-quality placeholder to demonstrate the workflow
+            const imageUrl = `https://picsum.photos/seed/${Math.random()}/800/600`;
+            
+            const img = new Image();
+            img.crossOrigin = "Anonymous"; 
+            img.src = imageUrl;
+            img.onload = () => {
+                document.getElementById('placeholder-text').style.display = 'none';
+                document.getElementById('editTools').style.display = 'flex';
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                originalImage = img;
+            };
+        }
+
+        function applyFilter(filterString) {
+            if (!originalImage) return;
+            ctx.filter = filterString;
+            ctx.drawImage(originalImage, 0, 0);
+        }
+
+        function resetImage() {
+            if (!originalImage) return;
+            ctx.filter = 'none';
+            ctx.drawImage(originalImage, 0, 0);
+        }
+    </script>
+</body>
+  </html>
+  
